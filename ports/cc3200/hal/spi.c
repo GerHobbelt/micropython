@@ -680,7 +680,7 @@ SPIReset(unsigned long ulBase)
 //! \param ulBitRate is the desired bit rate.(master mode)
 //! \param ulMode is the mode of operation.
 //! \param ulSubMode is one of the valid sub-modes.
-//! \param ulConfig is logical OR of configuration paramaters.
+//! \param ulConfig is logical OR of configuration parameters.
 //!
 //! This function configures SPI port for operation in specified sub-mode and
 //! required bit rated as specified by \e ulMode and \e ulBitRate parameters
