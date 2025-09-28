@@ -219,6 +219,8 @@ def gen_rst(results):
     class_ = []
     for output in results:
         section = output.class_.split(",")
+        if len(section) < 2:
+            raise SystemExit("Each item must have at least 2 categories")
         for i in range(len(section)):
             section[i] = section[i].rstrip()
             if section[i] in CLASSMAP:
@@ -228,8 +230,8 @@ def gen_rst(results):
                     filename = section[i].replace(" ", "_").lower()
                     rst = open(os.path.join(DOCPATH, filename + ".rst"), "w")
                     rst.write(HEADER)
-                    rst.write(section[i] + "\n")
-                    rst.write(RSTCHARS[0] * len(section[i]))
+                    rst.write(section[0] + "\n")
+                    rst.write(RSTCHARS[0] * len(section[0]) + "\n\n")
                     rst.write(time.strftime("\nGenerated %a %d %b %Y %X UTC\n\n", time.gmtime()))
                     # If a file docs/differences/<filename>_preamble.txt exists
                     # then its output is inserted after the top-level heading,
@@ -247,7 +249,7 @@ def gen_rst(results):
         class_ = section
         rst.write(".. _cpydiff_%s:\n\n" % os.path.splitext(output.name)[0])
         rst.write(output.desc + "\n")
-        rst.write("~" * len(output.desc) + "\n\n")
+        rst.write(RSTCHARS[min(i + 1, len(RSTCHARS) - 1)] * len(output.desc) + "\n\n")
         if output.cause != "Unknown":
             rst.write("**Cause:** " + output.cause + "\n\n")
         if output.workaround != "Unknown":
