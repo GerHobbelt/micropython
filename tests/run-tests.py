@@ -16,7 +16,7 @@ import threading
 import tempfile
 
 # Maximum time to run a single test, in seconds.
-TEST_TIMEOUT = float(os.environ.get('MICROPY_TEST_TIMEOUT', 30))
+TEST_TIMEOUT = float(os.environ.get("MICROPY_TEST_TIMEOUT", 30))
 
 # See stackoverflow.com/questions/2632199: __file__ nor sys.argv[0]
 # are guaranteed to always work, this one should though.
@@ -105,9 +105,6 @@ PC_PLATFORMS = ("darwin", "linux", "win32")
 # Tests to skip on specific targets.
 # These are tests that are difficult to detect that they should not be run on the given target.
 platform_tests_to_skip = {
-    "esp8266": (
-        "misc/rge_sm.py",  # incorrect values due to object representation C
-    ),
     "minimal": (
         "basics/class_inplace_op.py",  # all special methods not supported
         "basics/subclass_native_init.py",  # native subclassing corner cases not support
@@ -414,7 +411,7 @@ def run_micropython(pyb, args, test_file, test_file_abspath, is_special=False):
                     def send_get(what):
                         # Detect {\x00} pattern and convert to ctrl-key codes.
                         ctrl_code = lambda m: bytes([int(m.group(1))])
-                        what = re.sub(rb'{\\x(\d\d)}', ctrl_code, what)
+                        what = re.sub(rb"{\\x(\d\d)}", ctrl_code, what)
 
                         os.write(master, what)
                         return get()
@@ -788,9 +785,6 @@ def run_tests(pyb, tests, args, result_dir, num_threads=1):
         skip_tests.add(
             "float/float2int_intbig.py"
         )  # requires fp32, there's float2int_fp30_intbig.py instead
-        skip_tests.add(
-            "float/string_format.py"
-        )  # requires fp32, there's string_format_fp30.py instead
         skip_tests.add("float/bytes_construct.py")  # requires fp32
         skip_tests.add("float/bytearray_construct.py")  # requires fp32
         skip_tests.add("float/float_format_ints_power10.py")  # requires fp32
@@ -1151,29 +1145,11 @@ class append_filter(argparse.Action):
         args.filters.append((option, re.compile(value)))
 
 
-def main():
-    global injected_import_hook_code
-
-    cmd_parser = argparse.ArgumentParser(
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="""Run and manage tests for MicroPython.
-
+test_instance_description = """\
 By default the tests are run against the unix port of MicroPython. To run it
 against something else, use the -t option.  See below for details.
-
-Tests are discovered by scanning test directories for .py files or using the
-specified test files. If test files nor directories are specified, the script
-expects to be ran in the tests directory (where this file is located) and the
-builtin tests suitable for the target platform are ran.
-
-When running tests, run-tests.py compares the MicroPython output of the test with the output
-produced by running the test through CPython unless a <test>.exp file is found, in which
-case it is used as comparison.
-
-If a test fails, run-tests.py produces a pair of <test>.out and <test>.exp files in the result
-directory with the MicroPython output and the expectations, respectively.
-""",
-        epilog="""\
+"""
+test_instance_epilog = """\
 The -t option accepts the following for the test instance:
 - unix - use the unix port of MicroPython, specified by the MICROPY_MICROPYTHON
   environment variable (which defaults to the standard variant of either the unix
@@ -1189,7 +1165,35 @@ The -t option accepts the following for the test instance:
 - execpty:<command> - execute a command and attach to the printed /dev/pts/<n> device
 - <a>.<b>.<c>.<d> - connect to the given IPv4 address
 - anything else specifies a serial port
+"""
 
+test_directory_description = """\
+Tests are discovered by scanning test directories for .py files or using the
+specified test files. If test files nor directories are specified, the script
+expects to be ran in the tests directory (where this file is located) and the
+builtin tests suitable for the target platform are ran.
+"""
+
+
+def main():
+    global injected_import_hook_code
+
+    cmd_parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=f"""Run and manage tests for MicroPython.
+
+{test_instance_description}
+{test_directory_description}
+
+When running tests, run-tests.py compares the MicroPython output of the test with the output
+produced by running the test through CPython unless a <test>.exp file is found, in which
+case it is used as comparison.
+
+If a test fails, run-tests.py produces a pair of <test>.out and <test>.exp files in the result
+directory with the MicroPython output and the expectations, respectively.
+""",
+        epilog=f"""\
+{test_instance_epilog}
 Options -i and -e can be multiple and processed in the order given. Regex
 "search" (vs "match") operation is used. An action (include/exclude) of
 the last matching regex is used:
