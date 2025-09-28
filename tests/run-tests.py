@@ -15,7 +15,7 @@ from multiprocessing.pool import ThreadPool
 import threading
 import tempfile
 
-# Maximum time to run a PC-based test, in seconds.
+# Maximum time to run a single test, in seconds.
 TEST_TIMEOUT = float(os.environ.get('MICROPY_TEST_TIMEOUT', 30))
 
 # See stackoverflow.com/questions/2632199: __file__ nor sys.argv[0]
@@ -251,22 +251,27 @@ def detect_test_platform(pyb, args):
     output = run_feature_check(pyb, args, "target_info.py")
     if output.endswith(b"CRASH"):
         raise ValueError("cannot detect platform: {}".format(output))
-    platform, arch = str(output, "ascii").strip().split()
+    platform, arch, thread = str(output, "ascii").strip().split()
     if arch == "None":
         arch = None
     inlineasm_arch = detect_inline_asm_arch(pyb, args)
+    if thread == "None":
+        thread = None
 
     args.platform = platform
     args.arch = arch
     if arch and not args.mpy_cross_flags:
         args.mpy_cross_flags = "-march=" + arch
     args.inlineasm_arch = inlineasm_arch
+    args.thread = thread
 
     print("platform={}".format(platform), end="")
     if arch:
         print(" arch={}".format(arch), end="")
     if inlineasm_arch:
         print(" inlineasm={}".format(inlineasm_arch), end="")
+    if thread:
+        print(" thread={}".format(thread), end="")
     print()
 
 
@@ -328,7 +333,7 @@ def run_script_on_remote_target(pyb, args, test_file, is_special):
     try:
         had_crash = False
         pyb.enter_raw_repl()
-        output_mupy = pyb.exec_(script)
+        output_mupy = pyb.exec_(script, timeout=TEST_TIMEOUT)
     except pyboard.PyboardError as e:
         had_crash = True
         if not is_special and e.args[0] == "exception":
@@ -628,6 +633,7 @@ def run_tests(pyb, tests, args, result_dir, num_threads=1):
     skip_tests = set()
     skip_native = False
     skip_int_big = False
+    skip_int_64 = False
     skip_bytearray = False
     skip_set_type = False
     skip_slice = False
@@ -657,6 +663,11 @@ def run_tests(pyb, tests, args, result_dir, num_threads=1):
         output = run_feature_check(pyb, args, "int_big.py")
         if output != b"1000000000000000000000000000000000000000000000\n":
             skip_int_big = True
+
+        # Check if 'long long' precision integers are supported, even if arbitrary precision is not
+        output = run_feature_check(pyb, args, "int_64.py")
+        if output != b"4611686018427387904\n":
+            skip_int_64 = True
 
         # Check if bytearray is supported, and skip such tests if it's not
         output = run_feature_check(pyb, args, "bytearray.py")
@@ -804,8 +815,8 @@ def run_tests(pyb, tests, args, result_dir, num_threads=1):
         skip_tests.add("cmdline/repl_sys_ps1_ps2.py")
         skip_tests.add("extmod/ssl_poll.py")
 
-    # Skip thread mutation tests on targets that don't have the GIL.
-    if args.platform in PC_PLATFORMS + ("rp2",):
+    # Skip thread mutation tests on targets that have unsafe threading behaviour.
+    if args.thread == "unsafe":
         for t in tests:
             if t.startswith("thread/mutate_"):
                 skip_tests.add(t)
@@ -855,6 +866,9 @@ def run_tests(pyb, tests, args, result_dir, num_threads=1):
             "micropython/emg_exc.py"
         )  # because native doesn't have proper traceback info
         skip_tests.add(
+            "micropython/heapalloc_slice.py"
+        )  # because native doesn't do the stack-allocated slice optimisation
+        skip_tests.add(
             "micropython/heapalloc_traceback.py"
         )  # because native doesn't have proper traceback info
         skip_tests.add(
@@ -882,11 +896,16 @@ def run_tests(pyb, tests, args, result_dir, num_threads=1):
         test_name = os.path.splitext(os.path.basename(test_file))[0]
         is_native = test_name.startswith("native_") or test_name.startswith("viper_")
         is_endian = test_name.endswith("_endian")
-        is_int_big = test_name.startswith("int_big") or test_name.endswith("_intbig")
+        is_int_big = (
+            test_name.startswith("int_big")
+            or test_name.endswith("_intbig")
+            or test_name.startswith("ffi_int")  # these tests contain large integer literals
+        )
+        is_int_64 = test_name.startswith("int_64") or test_name.endswith("_int64")
         is_bytearray = test_name.startswith("bytearray") or test_name.endswith("_bytearray")
         is_set_type = test_name.startswith(("set_", "frozenset")) or test_name.endswith("_set")
         is_slice = test_name.find("slice") != -1 or test_name in misc_slice_tests
-        is_async = test_name.startswith(("async_", "asyncio_"))
+        is_async = test_name.startswith(("async_", "asyncio_")) or test_name.endswith("_async")
         is_const = test_name.startswith("const")
         is_io_module = test_name.startswith("io_")
         is_fstring = test_name.startswith("string_fstring")
@@ -896,6 +915,7 @@ def run_tests(pyb, tests, args, result_dir, num_threads=1):
         skip_it |= skip_native and is_native
         skip_it |= skip_endian and is_endian
         skip_it |= skip_int_big and is_int_big
+        skip_it |= skip_int_64 and is_int_64
         skip_it |= skip_bytearray and is_bytearray
         skip_it |= skip_set_type and is_set_type
         skip_it |= skip_slice and is_slice
@@ -1314,6 +1334,8 @@ the last matching regex is used:
             )
             if args.inlineasm_arch is not None:
                 test_dirs += ("inlineasm/{}".format(args.inlineasm_arch),)
+            if args.thread is not None:
+                test_dirs += ("thread",)
             if args.platform == "pyboard":
                 # run pyboard tests
                 test_dirs += ("float", "stress", "ports/stm32")
@@ -1322,9 +1344,9 @@ the last matching regex is used:
             elif args.platform == "renesas-ra":
                 test_dirs += ("float", "ports/renesas-ra")
             elif args.platform == "rp2":
-                test_dirs += ("float", "stress", "thread", "ports/rp2")
+                test_dirs += ("float", "stress", "ports/rp2")
             elif args.platform == "esp32":
-                test_dirs += ("float", "stress", "thread")
+                test_dirs += ("float", "stress")
             elif args.platform in ("esp8266", "minimal", "samd", "nrf"):
                 test_dirs += ("float",)
             elif args.platform == "WiPy":

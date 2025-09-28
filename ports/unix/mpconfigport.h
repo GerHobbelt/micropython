@@ -124,6 +124,9 @@ typedef long mp_off_t;
 // VFS stat functions should return time values relative to 1970/1/1
 #define MICROPY_EPOCH_IS_1970       (1)
 
+// port modtime functions use time_t
+#define MICROPY_TIMESTAMP_IMPL      (MICROPY_TIMESTAMP_IMPL_TIME_T)
+
 // Assume that select() call, interrupted with a signal, and erroring
 // with EINTR, updates remaining timeout value.
 #define MICROPY_SELECT_REMAINING_TIME (1)
@@ -133,6 +136,9 @@ typedef long mp_off_t;
 #define MICROPY_STACKLESS           (0)
 #define MICROPY_STACKLESS_STRICT    (0)
 #endif
+
+// Recursive mutex is needed when threading is enabled, regardless of GIL setting.
+#define MICROPY_PY_THREAD_RECURSIVE_MUTEX (MICROPY_PY_THREAD)
 
 // Implementation of the machine module.
 #define MICROPY_PY_MACHINE_INCLUDEFILE "ports/unix/modmachine.c"
