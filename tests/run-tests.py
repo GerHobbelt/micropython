@@ -177,14 +177,6 @@ platform_tests_to_skip = {
         "thread/thread_lock3.py",
         "thread/thread_shared2.py",
     ),
-    "qemu": (
-        # Skip tests that require Cortex-M4.
-        "inlineasm/thumb/asmfpaddsub.py",
-        "inlineasm/thumb/asmfpcmp.py",
-        "inlineasm/thumb/asmfpldrstr.py",
-        "inlineasm/thumb/asmfpmuldiv.py",
-        "inlineasm/thumb/asmfpsqrt.py",
-    ),
     "webassembly": (
         "basics/string_format_modulo.py",  # can't print nulls to stdout
         "basics/string_strip.py",  # can't print nulls to stdout
@@ -254,6 +246,17 @@ def platform_to_port(platform):
     return platform_to_port_map.get(platform, platform)
 
 
+def convert_device_shortcut_to_real_device(device):
+    if device.startswith("a") and device[1:].isdigit():
+        return "/dev/ttyACM" + device[1:]
+    elif device.startswith("u") and device[1:].isdigit():
+        return "/dev/ttyUSB" + device[1:]
+    elif device.startswith("c") and device[1:].isdigit():
+        return "COM" + device[1:]
+    else:
+        return device
+
+
 def get_test_instance(test_instance, baudrate, user, password):
     if test_instance.startswith("port:"):
         _, port = test_instance.split(":", 1)
@@ -261,15 +264,9 @@ def get_test_instance(test_instance, baudrate, user, password):
         return None
     elif test_instance == "webassembly":
         return PyboardNodeRunner()
-    elif test_instance.startswith("a") and test_instance[1:].isdigit():
-        port = "/dev/ttyACM" + test_instance[1:]
-    elif test_instance.startswith("u") and test_instance[1:].isdigit():
-        port = "/dev/ttyUSB" + test_instance[1:]
-    elif test_instance.startswith("c") and test_instance[1:].isdigit():
-        port = "COM" + test_instance[1:]
     else:
         # Assume it's a device path.
-        port = test_instance
+        port = convert_device_shortcut_to_real_device(test_instance)
 
     global pyboard
     sys.path.append(base_path("../tools"))
@@ -757,13 +754,14 @@ def run_tests(pyb, tests, args, result_dir, num_threads=1):
                 skip_tests.add("inlineasm/thumb/asmbitops.py")
                 skip_tests.add("inlineasm/thumb/asmconst.py")
                 skip_tests.add("inlineasm/thumb/asmdiv.py")
+                skip_tests.add("inlineasm/thumb/asmit.py")
+                skip_tests.add("inlineasm/thumb/asmspecialregs.py")
+            if args.arch not in ("armv7emsp", "armv7emdp"):
                 skip_tests.add("inlineasm/thumb/asmfpaddsub.py")
                 skip_tests.add("inlineasm/thumb/asmfpcmp.py")
                 skip_tests.add("inlineasm/thumb/asmfpldrstr.py")
                 skip_tests.add("inlineasm/thumb/asmfpmuldiv.py")
                 skip_tests.add("inlineasm/thumb/asmfpsqrt.py")
-                skip_tests.add("inlineasm/thumb/asmit.py")
-                skip_tests.add("inlineasm/thumb/asmspecialregs.py")
 
         # Check if emacs repl is supported, and skip such tests if it's not
         t = run_feature_check(pyb, args, "repl_emacs_check.py")

@@ -3,7 +3,7 @@
  *
  * The MIT License (MIT)
  *
- * Copyright (c) 2024-2025 OpenMV LLC.
+ * Copyright (c) 2025 Damien P. George
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,29 +25,15 @@
  */
 
 #include "py/mphal.h"
-#include "se_services.h"
-#include "mbedtls_config_port.h"
+#include "shared/timeutils/timeutils.h"
 
-int mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t *olen) {
-    uint32_t val = 0;
-    int n = 0;
-    *olen = len;
-    while (len--) {
-        if (!n) {
-            val = se_services_rand64();
-            n = 4;
-        }
-        *output++ = val;
-        val >>= 8;
-        --n;
-    }
-    return 0;
+// Get the localtime.
+static void mp_time_localtime_get(timeutils_struct_time_t *tm) {
+    mp_timestamp_t s = mp_hal_time_get(NULL);
+    timeutils_seconds_since_epoch_to_struct_time(s, tm);
 }
 
-#if defined(MBEDTLS_HAVE_TIME)
-
-time_t alif_mbedtls_time(time_t *timer) {
-    return mp_hal_time_get(NULL);
+// Return the number of seconds since the Epoch.
+static mp_obj_t mp_time_time_get(void) {
+    return mp_obj_new_int_from_uint(mp_hal_time_get(NULL));
 }
-
-#endif

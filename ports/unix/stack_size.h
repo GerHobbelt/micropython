@@ -3,7 +3,7 @@
  *
  * The MIT License (MIT)
  *
- * Copyright (c) 2024-2025 OpenMV LLC.
+ * Copyright (c) 2025 Angus Gratton
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,31 +23,32 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#ifndef MICROPY_INCLUDED_UNIX_STACK_SIZE_H
+#define MICROPY_INCLUDED_UNIX_STACK_SIZE_H
 
-#include "py/mphal.h"
-#include "se_services.h"
-#include "mbedtls_config_port.h"
+#include "py/misc.h"
 
-int mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t *olen) {
-    uint32_t val = 0;
-    int n = 0;
-    *olen = len;
-    while (len--) {
-        if (!n) {
-            val = se_services_rand64();
-            n = 4;
-        }
-        *output++ = val;
-        val >>= 8;
-        --n;
-    }
-    return 0;
-}
+// Define scaling factors for the stack size (also applies to main thread)
+#ifndef UNIX_STACK_MULTIPLIER
 
-#if defined(MBEDTLS_HAVE_TIME)
-
-time_t alif_mbedtls_time(time_t *timer) {
-    return mp_hal_time_get(NULL);
-}
-
+#if defined(__arm__) && !defined(__thumb2__)
+// ARM (non-Thumb) architectures require more stack.
+#define UNIX_STACK_MUL_ARM 2
+#else
+#define UNIX_STACK_MUL_ARM 1
 #endif
+
+#if MP_SANITIZER_BUILD
+// Sanitizer features consume significant stack in some cases
+// This multiplier can probably be removed when using GCC 12 or newer.
+#define UNIX_STACK_MUL_SANITIZERS 4
+#else
+#define UNIX_STACK_MUL_SANITIZERS 1
+#endif
+
+// Double the stack size for 64-bit builds, plus additional scaling
+#define UNIX_STACK_MULTIPLIER ((sizeof(void *) / 4) * UNIX_STACK_MUL_ARM * UNIX_STACK_MUL_SANITIZERS)
+
+#endif // UNIX_STACK_MULTIPLIER
+
+#endif // MICROPY_INCLUDED_UNIX_STACK_SIZE_H
