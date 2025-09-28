@@ -512,6 +512,18 @@ CI_UNIX_OPTS_QEMU_RISCV64=(
     MICROPY_STANDALONE=1
 )
 
+CI_UNIX_OPTS_SANITIZE_ADDRESS=(
+    VARIANT=coverage
+    CFLAGS_EXTRA="-fsanitize=address"
+    LDFLAGS_EXTRA="-fsanitize=address"
+)
+
+CI_UNIX_OPTS_SANITIZE_UNDEFINED=(
+    VARIANT=coverage
+    CFLAGS_EXTRA="-fsanitize=undefined -fno-sanitize=nonnull-attribute"
+    LDFLAGS_EXTRA="-fsanitize=undefined -fno-sanitize=nonnull-attribute"
+)
+
 function ci_unix_build_helper {
     make ${MAKEOPTS} -C mpy-cross
     make ${MAKEOPTS} -C ports/unix "$@" submodules
@@ -561,13 +573,11 @@ function ci_native_mpy_modules_build {
         make -C examples/natmod/$natmod ARCH=$arch
     done
 
-    # features2 requires soft-float on armv7m, rv32imc, and xtensa.  On armv6m
-    # the compiler generates absolute relocations in the object file
-    # referencing soft-float functions, which is not supported at the moment.
+    # features2 requires soft-float on rv32imc and xtensa.
     make -C examples/natmod/features2 ARCH=$arch clean
-    if [ $arch = "rv32imc" ] || [ $arch = "armv7m" ] || [ $arch = "xtensa" ]; then
+    if [ $arch = "rv32imc" ] || [ $arch = "xtensa" ]; then
         make -C examples/natmod/features2 ARCH=$arch MICROPY_FLOAT_IMPL=float
-    elif [ $arch != "armv6m" ]; then
+    else
         make -C examples/natmod/features2 ARCH=$arch
     fi
 
@@ -742,6 +752,28 @@ function ci_unix_settrace_stackless_build {
 
 function ci_unix_settrace_stackless_run_tests {
     ci_unix_run_tests_full_helper standard "${CI_UNIX_OPTS_SYS_SETTRACE_STACKLESS[@]}"
+}
+
+function ci_unix_sanitize_undefined_build {
+    make ${MAKEOPTS} -C mpy-cross
+    make ${MAKEOPTS} -C ports/unix submodules
+    make ${MAKEOPTS} -C ports/unix "${CI_UNIX_OPTS_SANITIZE_UNDEFINED[@]}"
+    ci_unix_build_ffi_lib_helper gcc
+}
+
+function ci_unix_sanitize_undefined_run_tests {
+    ci_unix_run_tests_full_helper coverage "${CI_UNIX_OPTS_SANITIZE_UNDEFINED[@]}"
+}
+
+function ci_unix_sanitize_address_build {
+    make ${MAKEOPTS} -C mpy-cross
+    make ${MAKEOPTS} -C ports/unix submodules
+    make ${MAKEOPTS} -C ports/unix "${CI_UNIX_OPTS_SANITIZE_ADDRESS[@]}"
+    ci_unix_build_ffi_lib_helper gcc
+}
+
+function ci_unix_sanitize_address_run_tests {
+    ci_unix_run_tests_full_helper coverage "${CI_UNIX_OPTS_SANITIZE_ADDRESS[@]}"
 }
 
 function ci_unix_macos_build {
