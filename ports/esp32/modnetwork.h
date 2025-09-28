@@ -52,7 +52,7 @@ extern const mp_obj_type_t esp_network_wlan_type;
 MP_DECLARE_CONST_FUN_OBJ_0(esp_network_initialize_obj);
 MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(esp_network_get_wlan_obj);
 MP_DECLARE_CONST_FUN_OBJ_KW(esp_network_get_lan_obj);
-MP_DECLARE_CONST_FUN_OBJ_1(esp_network_ppp_make_new_obj);
+extern const struct _mp_obj_type_t esp_network_ppp_lwip_type;
 MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(esp_network_ifconfig_obj);
 MP_DECLARE_CONST_FUN_OBJ_KW(esp_network_ipconfig_obj);
 MP_DECLARE_CONST_FUN_OBJ_KW(esp_nic_ipconfig_obj);
@@ -61,7 +61,7 @@ MP_DECLARE_CONST_FUN_OBJ_VAR_BETWEEN(esp_network_phy_mode_obj);
 
 mp_obj_t esp_ifname(esp_netif_t *netif);
 
-NORETURN void esp_exceptions_helper(esp_err_t e);
+MP_NORETURN void esp_exceptions_helper(esp_err_t e);
 
 static inline void esp_exceptions(esp_err_t e) {
     if (e != ESP_OK) {
