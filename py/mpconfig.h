@@ -1559,6 +1559,7 @@ typedef time_t mp_timestamp_t;
 #endif
 
 // Whether to provide fix for pow(1, NaN) and pow(NaN, 0), which both should be 1 not NaN.
+// Also fixes pow(base, NaN) to return NaN for other values of base.
 #ifndef MICROPY_PY_MATH_POW_FIX_NAN
 #define MICROPY_PY_MATH_POW_FIX_NAN (0)
 #endif
@@ -2098,7 +2099,7 @@ typedef time_t mp_timestamp_t;
 /*****************************************************************************/
 /* Miscellaneous settings                                                    */
 
-// All uPy objects in ROM must be aligned on at least a 4 byte boundary
+// All MicroPython objects in ROM must be aligned on at least a 4 byte boundary
 // so that the small-int/qstr/pointer distinction can be made.  For machines
 // that don't do this (eg 16-bit CPU), define the following macro to something
 // like __attribute__((aligned(4))).
@@ -2243,15 +2244,18 @@ typedef time_t mp_timestamp_t;
 #define UINT_FMT "%lu"
 #define INT_FMT "%ld"
 #define HEX_FMT "%lx"
+#define SIZE_FMT "%lu"
 #elif defined(_WIN64)
 #define UINT_FMT "%llu"
 #define INT_FMT "%lld"
 #define HEX_FMT "%llx"
+#define SIZE_FMT "%llu"
 #else
 // Archs where mp_int_t == int
 #define UINT_FMT "%u"
 #define INT_FMT "%d"
 #define HEX_FMT "%x"
+#define SIZE_FMT "%u"
 #endif
 #endif // INT_FMT
 
