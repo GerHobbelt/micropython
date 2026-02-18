@@ -11,11 +11,15 @@
         "WiFi"
     ],
     "images": [
-        "esp32p4_devkitmini.jpg"
+        "esp32_p4_function_ev_board.jpg"
     ],
     "mcu": "esp32p4",
     "product": "ESP32-P4",
     "thumbnail": "",
     "url": "https://www.espressif.com/en/products/modules",
+    "variants": {
+        "C5_WIFI": "Support for external C5 WiFi/BLE",
+        "C6_WIFI": "Support for external C6 WiFi/BLE"
+    },
     "vendor": "Espressif"
 }
