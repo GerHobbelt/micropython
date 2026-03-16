@@ -154,8 +154,8 @@ void board_early_init(void) {
         .vtor_address = SCB->VTOR,
         .vtor_address_ns = SCB->VTOR,
         // Configure wake-up sources.
-        .ewic_cfg = EWIC_VBAT_GPIO | EWIC_RTC_A,
-        .wakeup_events = WE_LPGPIO7 | WE_LPGPIO6 | WE_LPGPIO5 | WE_LPGPIO4 | WE_LPRTC,
+        .ewic_cfg = EWIC_VBAT_GPIO | EWIC_VBAT_TIMER | EWIC_RTC_A,
+        .wakeup_events = WE_LPGPIO7 | WE_LPGPIO6 | WE_LPGPIO5 | WE_LPGPIO4 | WE_LPTIMER0 | WE_LPRTC,
     };
 
     if (se_services_set_off_profile(&off_profile)) {
@@ -166,6 +166,11 @@ void board_early_init(void) {
     if (se_services_select_pll_source(PLL_SOURCE_PLL, PLL_TARGET_PD4_SRAM)) {
         MICROPY_BOARD_FATAL_ERROR("se_services_select_pll_source");
     }
+
+    // Configure the sensor interrupts inputs.
+    mp_hal_pin_input(pin_IMU_INT1);
+    mp_hal_pin_input(pin_IMU_INT2);
+    mp_hal_pin_input(pin_TOF_I2C_INT);
 
     // Configure the user button as an input (it has an external pull-up).
     mp_hal_pin_input(pin_SW);
