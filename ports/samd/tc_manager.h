@@ -3,6 +3,8 @@
  *
  * The MIT License (MIT)
  *
+ * Copyright (c) 2022 Robert Hammelrath
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -21,7 +23,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#ifndef MICROPY_INCLUDED_SAMD_TCINSTANCE_H
+#define MICROPY_INCLUDED_SAMD_TCINSTANCE_H
 
-#define MICROPY_CONFIG_ROM_LEVEL (MICROPY_CONFIG_ROM_LEVEL_EXTRA_FEATURES)
+#include "py/runtime.h"
 
-#include "../mpconfigport.h"
+extern Tc *tc_instance_list[];
+
+int allocate_tc_instance(void);
+void free_tc_instance(int tc_index);
+int configure_tc(int tc_index, int freq, int event);
+void tc_deinit(void);
+
+#endif // MICROPY_INCLUDED_SAMD_TCINSTANCE_H
