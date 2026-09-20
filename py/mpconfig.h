@@ -1479,6 +1479,11 @@ typedef time_t mp_timestamp_t;
 #define MICROPY_PY_BUILTINS_ROUND_INT (MICROPY_CONFIG_ROM_LEVEL_AT_LEAST_EXTRA_FEATURES)
 #endif
 
+// Whether to implement dir() to enumerate object fields.
+#ifndef MICROPY_PY_BUILTINS_DIR
+#define MICROPY_PY_BUILTINS_DIR (MICROPY_CONFIG_ROM_LEVEL_AT_LEAST_CORE_FEATURES)
+#endif
+
 // Whether to support complete set of special methods for user
 // classes, or only the most used ones. "Inplace" methods are
 // controlled by MICROPY_PY_ALL_INPLACE_SPECIAL_METHODS below.
@@ -2126,6 +2131,16 @@ typedef time_t mp_timestamp_t;
 // The default backlog value for socket.listen(backlog)
 #ifndef MICROPY_PY_SOCKET_LISTEN_BACKLOG_DEFAULT
 #define MICROPY_PY_SOCKET_LISTEN_BACKLOG_DEFAULT (2)
+#endif
+
+// Whether to enable lwIP bindings to be used as the implementation of the `socket` module
+#ifndef MICROPY_PY_LWIP
+#define MICROPY_PY_LWIP (0)
+#endif
+
+// Whether to support raw sockets via the `socket.SOCK_RAW` constant
+#ifndef MICROPY_PY_LWIP_SOCK_RAW
+#define MICROPY_PY_LWIP_SOCK_RAW (MICROPY_PY_LWIP)
 #endif
 
 #ifndef MICROPY_PY_SSL
