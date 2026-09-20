@@ -158,7 +158,7 @@ function ci_mpy_format_setup {
 
 function ci_mpy_format_test {
     # Test mpy-tool.py dump feature on bytecode
-    python3 ./tools/mpy-tool.py -xd tests/frozen/frozentest.mpy
+    python3 ./tools/mpy-tool.py -xd tests/assets/frozentest.mpy
 
     # Build MicroPython
     ci_unix_standard_build
@@ -167,7 +167,7 @@ function ci_mpy_format_test {
     export MICROPYPATH=.
 
     # Test mpy-tool.py running under MicroPython
-    $micropython ./tools/mpy-tool.py -x -d tests/frozen/frozentest.mpy
+    $micropython ./tools/mpy-tool.py -x -d tests/assets/frozentest.mpy
 
     # Test mpy-tool.py dump feature on native code
     make -C examples/natmod/features1
@@ -406,7 +406,7 @@ function ci_qemu_build_arm_sabrelite {
 
 function ci_qemu_build_arm_thumb_softfp {
     ci_qemu_build_arm_prepare
-    make BOARD=MPS2_AN385 ${MAKEOPTS} -C ports/qemu test_full
+    make BOARD=MPS2_AN385 ${MAKEOPTS} -C ports/qemu USER_C_MODULES=../../examples/usercmodule test_full
 
     # Test building native .mpy with ARM-M softfp architectures.
     ci_native_mpy_modules_build armv6m
