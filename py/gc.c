@@ -1011,6 +1011,17 @@ found:
     MP_STATE_MEM(gc_alloc_amount) += n_blocks;
     #endif
 
+    #if MICROPY_ENABLE_FINALISER
+    if (has_finaliser) {
+        // clear type pointer in case it is never set
+        ((mp_obj_base_t *)ret_ptr)->type = NULL;
+        // set mp_obj flag only if it has a finaliser
+        FTB_SET(area, start_block);
+    }
+    #else
+    (void)has_finaliser;
+    #endif
+
     GC_EXIT();
 
     #if MICROPY_GC_CONSERVATIVE_CLEAR
@@ -1023,19 +1034,6 @@ found:
     // doesn't actually use the entire block.  As such they will continue
     // to point to the heap and may prevent other blocks from being reclaimed.
     memset((byte *)ret_ptr + n_bytes, 0, (end_block - start_block + 1) * BYTES_PER_BLOCK - n_bytes);
-    #endif
-
-    #if MICROPY_ENABLE_FINALISER
-    if (has_finaliser) {
-        // clear type pointer in case it is never set
-        ((mp_obj_base_t *)ret_ptr)->type = NULL;
-        // set mp_obj flag only if it has a finaliser
-        GC_ENTER();
-        FTB_SET(area, start_block);
-        GC_EXIT();
-    }
-    #else
-    (void)has_finaliser;
     #endif
 
     #if EXTENSIVE_HEAP_PROFILING
@@ -1122,6 +1120,32 @@ void gc_free(void *ptr) {
     #if EXTENSIVE_HEAP_PROFILING
     gc_dump_alloc_table(&mp_plat_print);
     #endif
+}
+
+// Get the ATB, FTB and WTB bits corresponding to the GC pointer.
+// `ptr` must be a valid GC block.
+uint32_t gc_meta_bits(void *ptr) {
+    // Get the GC area and block number of the pointer.
+    mp_state_mem_area_t *area;
+    #if MICROPY_GC_SPLIT_HEAP
+    area = gc_get_ptr_area(ptr);
+    assert(area);
+    #else
+    assert(VERIFY_PTR(ptr));
+    area = &MP_STATE_MEM(area);
+    #endif
+    size_t block = BLOCK_FROM_PTR(area, ptr);
+
+    // Get the GC bits associated with the pointer.
+    uint32_t bits = ATB_GET_KIND(area, block);
+    #if MICROPY_ENABLE_FINALISER
+    bits |= FTB_GET(area, block) << 2;
+    #endif
+    #if MICROPY_PY_WEAKREF
+    bits |= WTB_GET(area, block) << 3;
+    #endif
+
+    return bits;
 }
 
 size_t gc_nbytes(const void *ptr) {
